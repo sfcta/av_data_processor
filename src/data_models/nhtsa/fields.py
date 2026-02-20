@@ -68,3 +68,22 @@ class HighestInjurySeverityAllegedLegacy(str, Enum):
 
     def to_legacy(self):
         return self
+    
+class CrashWith(str, Enum):
+    PASSENGER_CAR = 'Passenger Car'
+    SUV = 'SUV'
+    VAN = 'Van'
+    PICKUP_TRUCK = 'Pickup Truck'
+    MOTORCYCLE = 'Motorcycle'
+    BUS = 'Bus'
+    HEAVY_TRUCK = 'Heavy Truck'
+    EMERGENCY_VEHICLE = 'First Responder Vehicle'
+    PEDESTRIAN = 'Non-Motorist: Pedestrian'
+    CYCLIST = 'Non-Motorist: Cyclist'
+    SCOOTER_SKATEBOARD = 'Non-Motorist: Scooter - Skateboard'
+    OTHER_NONMOTORIST = 'Non-Motorist: Other'
+    POLE_TREE = 'Pole / Tree'
+    OTHER_FIXED_OBJECT = 'Other Fixed Object'
+    ANIMAL = 'Animal'
+    OTHER = 'Other, see Narrative'
+    UNKNOWN = 'Unknown'
