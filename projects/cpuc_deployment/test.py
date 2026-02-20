@@ -1,32 +1,69 @@
 
 import pandas as pd
 import csv
-from data_models.cpuc_deployment.reports import Trip
+from data_models.cpuc_deployment.reports import Trip, Month, Tract
 from pathlib import Path
+from datetime import datetime
 
-def lower_and_strip(x):
-    if isinstance(x, str):
-        return x.lower().strip()
-    return x
+def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None):
+    data = []
+    i = 0
+    
+    start = datetime.now()
+    
+    for fname in sorted(Path(directory).rglob(rglob_pattern)):
+        if isinstance(rglob_exclude, str):
+            if rglob_exclude.lower() in str(fname).lower():
+                continue
+        
+        permit_type = 'drivered'
+        company = None
+        
+        for c in companies:
+            if c in str(fname):
+                if isinstance(company, str):
+                    raise Exception('more than one valid company name found: {}, {}'.format(c, company))
+                company = c
+    
+        if 'driverless' in str(fname).lower():
+            permit_type = 'driverless'
+        
+        #print(fname)
+        #print('company: {}, permit type: {}'.format(company, permit_type))
+        
+        with open(fname) as f:
+            reader = csv.DictReader(f)        
+            for row in reader:        
+                # validate
+                #trip = Model(**row).model_dump().values()
+                #data.append([company, permit_type] + list(trip))
+                try:
+                    trip = Model(**row).model_dump().values()
+                    data.append([company, permit_type] + list(trip))
+                except Exception as e:
+                    print('WARNING: could not parse {}'.format(fname))
+                    print(row)
+                    print(e)
+                    break
+
+    return (
+        pd.DataFrame(columns = ['company','permit_type'] + list(Model.model_fields.keys()) + list(Model.model_computed_fields.keys()),
+                     data = data)
+    )
 
 if __name__=='__main__':
-     INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment\2025-01-01_2025-03-31\Waymo'
-     df = pd.read_csv(Path(INDIR, 'PSG0038152_2025_05_AV_Trips_Part0-Public.csv'))
-     df['ReasonUnfulfilled'] = df['ReasonUnfulfilled'].map(lower_and_strip)
-
-     data = []
-
-     for idx, row in df.iterrows():
-          d = row.to_dict()
-          try:
-               d1 = Trip(**d)
-               data.append(d1.model_dump().values())
-          except Exception as e:
-               print(e)
-               print('Index: {}'.format(idx))
-               print(row)
-
-     df_valid = pd.DataFrame(
-          columns = list(Trip.model_fields.keys()) + list(Trip.model_computed_fields.keys()),
-          data = data
+     INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment'
+     companies = ['Cruise','Waymo']
+     
+     month = read_and_validate_dir(
+          directory=INDIR, 
+          rglob_pattern='*Month*.csv', 
+          Model=Month, 
+          rglob_exclude='tract'
+          )
+     
+     tract = read_and_validate_dir(
+          directory=INDIR, 
+          rglob_pattern='*Tract*.csv', 
+          Model=Tract, 
           )
