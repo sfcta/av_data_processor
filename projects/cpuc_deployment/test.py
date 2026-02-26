@@ -1,7 +1,7 @@
 
 import pandas as pd
 import csv
-from data_models.cpuc_deployment.reports import Trip, Month, Tract
+from data_models.cpuc_deployment.reports import Trip, Month, TripTract, IncidentTract
 from pathlib import Path
 from datetime import datetime
 
@@ -55,6 +55,18 @@ if __name__=='__main__':
      INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment'
      companies = ['Cruise','Waymo']
      
+     # custom preprocess
+     df = pd.read_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Incidents-Location_Part0-Public.csv')
+     df['Quarter'] = 4
+     df.to_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Incidents-Location_Part0-Public-SFCTA.csv',
+               index=False)
+     
+     df = pd.read_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Chargers_Part0-Public.csv')
+     df['Quarter'] = 4
+     df.to_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Chargers_Part0-Public-SFCTA.csv',
+               index=False)
+     
+
      month = read_and_validate_dir(
           directory=INDIR, 
           rglob_pattern='*Month*.csv', 
@@ -65,5 +77,11 @@ if __name__=='__main__':
      tract = read_and_validate_dir(
           directory=INDIR, 
           rglob_pattern='*Tract*.csv', 
-          Model=Tract, 
+          Model=TripTract, 
+          )
+     
+     incident_tract = read_and_validate_dir(
+          directory=INDIR, 
+          rglob_pattern='*Location*.csv', 
+          Model=IncidentTract, 
           )

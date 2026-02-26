@@ -1,6 +1,6 @@
 
 [project]
-name = "cpuc_av_quarterly_reports"
+name = "av_dashboard"
 version = "0.1.0"
 description = "Set of tools to process and analyze cpuc av quarterly reports."
 readme = "README.md"
