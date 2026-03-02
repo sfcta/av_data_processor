@@ -1,14 +1,167 @@
-import re
+import re, csv
 import pandas as pd
 from typing import Any
 from math import nan, isnan
 from fuzzywuzzy import fuzz
+from pathlib import Path
 
+def get_aliases(Model, drop_unaliased=True, required_only=False):
+    aliases = []
+    for field, field_info in Model.model_fields.items():
+        if not required_only or (required_only and field_info.is_required()):
+            if field_info.alias != None:
+                aliases.append(field_info.alias)
+            elif not drop_unaliased:
+                aliases.append(field)
+    return aliases
 
-numeric_re = r'\d+|(\d+(,\d{3})*(\.\d+)?)'
-redacted_re = r'([Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd])'
-na_re = r'([Nn]/{0,1}[Aa])'
+def get_header(ifile, drop_unnamed=True):
+    df = pd.read_csv(ifile, nrows=0)
+    header = []
+    for c in df.columns:
+        if not 'Unnamed:' == c[:8]:
+            header.append(c)
+    return header
 
+def get_file_model(ifile, min_header_ratio=0.80, drop_unaliased=True, fuzzy=False, min_fuzzy_ratio=0.50):
+    '''
+    read in a file header, compare it to each model's aliases, and return the one that matches
+    '''
+    header = get_header(ifile) 
+
+    best_r = 0
+    best_M = None
+    for M in [Trip, TripTract, Month, Incident, IncidentTract, IncidentLegacy, Charger, ChargingSession, Stoppage, StoppageFleet]:
+        r = header_model_match_ratio(header, 
+                                     M, 
+                                     drop_unaliased=drop_unaliased,
+                                     min_header_ratio=min_header_ratio,
+                                     fuzzy=fuzzy,
+                                     min_fuzzy_ratio=min_fuzzy_ratio
+                                    )
+        if r == 1:
+            return M
+
+        elif r > best_r and r > min_header_ratio:
+            best_r = r
+            best_M = M
+
+    return best_M
+
+def header_model_match_ratio(header, Model, min_header_ratio=0.80, fuzzy=False, min_fuzzy_ratio=0.50, drop_unaliased=True, required_only=True):
+    aliases = get_aliases(Model, drop_unaliased, required_only)
+
+    matches = 0
+    expected_matches = len(header)
+
+    if expected_matches == 0:
+        return 0
+    
+    for name in header:
+        best_r = 0
+        best_alias = None
+        
+        for alias in aliases:
+            if name.strip().lower() == alias.strip().lower():
+                best_r = 100
+                best_alias = alias
+                break
+            elif fuzzy:
+                r = fuzz.ratio(name.lower(), alias.lower())
+                if r > best_r and r > min_fuzzy_ratio * 100:
+                    best_r = r
+                    best_alias = alias
+        if best_alias != None:
+            matches += 1
+
+    return matches / expected_matches  
+
+def get_header_rename_dict(ifile, Model, fuzzy=False, min_fuzzy_ratio=0.50, drop_unaliased=True, required_only=False, manual={}):
+    aliases = get_aliases(Model, drop_unaliased, required_only)
+    rename = {}
+
+    columns = pd.read_csv(ifile, nrows=0).columns.tolist()
+    header = get_header(ifile)
+
+    for k, v in manual.items():
+        if k in header:
+            rename[k] = v
+
+    if not fuzzy:
+        for name in header:
+            for alias in aliases:
+                if (
+                    (name != alias) and 
+                    (name.strip().lower() == alias.strip().lower())
+                   ):
+                    rename[name] = alias
+                    break
+    else:
+        for name in header:
+            best_r = 0
+            best_alias = None
+        
+            for alias in aliases:
+                r = fuzz.ratio(name.lower(), alias.lower())
+                
+                if r > best_r and r > min_fuzzy_ratio * 100:
+                    best_r = r
+                    best_alias = alias
+                    #print(name, alias, r)
+                    
+            if (
+                (name != best_alias) and 
+                (best_alias != None) and 
+                (best_alias not in rename.values()) and # avoid name collisions
+                (best_alias not in header) # avoid name collisions
+               ):
+                rename[name] = best_alias
+    
+    return rename
+
+def get_attr_from_path(path):
+    meta_re = r'.*(?P<report_period>\d{4}-\d{1,2}-\d{1,2}_\d{4}-\d{1,2}-\d{1,2})[\\/](?P<company>[a-zA-Z0-9\.]*).*[\\/].*.csv'
+    compiled_meta_re = re.compile(meta_re)
+    
+    try:
+        meta = compiled_meta_re.match(str(path)).groupdict()
+    except:
+        raise Exception('No attr match for {}'.format(path))
+
+    if 'driverless' in str(path).lower():
+        meta['driver_type'] = 'driverless'
+    elif 'drivered' in str(path).lower():
+        meta['driver_type'] = 'drivered'
+    elif meta['report_period'] < '2023-09-01':
+        meta['driver_type'] = 'drivered'
+    else:
+        meta['driver_type'] = 'driverless'
+
+    return meta
+
+def get_opath_from_ipath(ipath, oroot):
+    attr = get_attr_from_path(ipath)
+    return Path(oroot) / attr['report_period'] / attr['company'].lower() / attr['driver_type']
+
+def copy_and_rename_headers(ifile, ofile, rename):
+    with open(ifile, newline='', encoding="utf-8-sig") as inFile, open(ofile, 'w', newline='') as outfile:
+        r = csv.reader(inFile)
+        w = csv.writer(outfile)
+    
+        header_in = next(r, None)  
+        header_out = []
+        for h in header_in:
+            if h.strip() in rename:
+                header_out.append(rename[h.strip()])
+            else:
+                header_out.append(h.strip())
+        
+        # write new header
+        w.writerow(header_out)
+    
+        # copy the rest
+        for row in r:
+            w.writerow(row)
 
 def find_name_match(name, candidates):
     for c in candidates:

@@ -1,11 +1,61 @@
 
 import pandas as pd
-import csv
-from data_models.cpuc_deployment.reports import Trip, Month, TripTract, IncidentTract
+import csv, re
+from shutil import copyfile
+from data_models.cpuc_deployment.reports import Trip, Month, TripTract, IncidentTract, Incident, IncidentLegacy, Charger, ChargingSession
 from pathlib import Path
 from datetime import datetime
+from utils.helpers import get_file_model, get_opath_from_ipath, get_header_rename_dict, copy_and_rename_headers, get_attr_from_path
 
-def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None):
+def custom_preprocess(root):
+    # This is missing TCPID, insert it and fill it with 'MISSING FIELD'
+    f = Path(root) / '2023-09-01_2023-11-30/waymo/driverless/Month.csv'
+    df = pd.read_csv(f)
+    df.insert(0, 'TCPID', 'MISSING FIELD')
+    df.to_csv(f, index=False)
+
+    # TCP is unlabeled in the header, label it
+    f = Path(root) / '2022-09-01_2022-11-30/waymo/drivered/IncidentTract.csv'
+    df = pd.read_csv(f)
+    df.rename(columns={'':'TCPID'}, inplace=True)
+    df.to_csv(f, index=False)
+
+    # This is missing TCPID, insert it and fill it with 'MISSING FIELD'
+    f = Path(root) / '2022-09-01_2022-11-30/waymo/drivered/IncidentTract.csv'
+    df = pd.read_csv(f)
+    df.insert(0, 'TCPID', 'MISSING FIELD')
+    df.to_csv(f, index=False)
+
+def preprocess_dir(idir, odir, rglob_pattern, file_pattern='.*', rglob_exclude=None, fuzzy=False):
+    start = datetime.now()
+    c = re.compile(file_pattern)
+    
+    for fname in sorted(Path(idir).rglob(rglob_pattern)):
+        if isinstance(rglob_exclude, str):
+            if rglob_exclude.lower() in str(fname).lower():
+                continue
+
+        if c.fullmatch(str(fname)):
+            model = get_file_model(fname, fuzzy=fuzzy)
+            if model == None:
+                print('Did not match file {}'.format(fname))
+                continue
+
+            opath = get_opath_from_ipath(fname, odir)
+            rename = get_header_rename_dict(fname, model, fuzzy=fuzzy, manual={'redacted_VIN':'VIN'})
+
+            if not opath.exists():
+                opath.mkdir(parents=True, exist_ok=True)
+            
+            if len(rename) > 0:
+                print(fname.parts[-1], model.__name__)
+                print('rename: {}'.format(rename))
+                copy_and_rename_headers(fname, opath / '{}.csv'.format(model.__name__), rename)
+            else:
+                
+                copyfile(fname, opath / '{}.csv'.format(model.__name__))
+
+def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None, attach_path_attributes=True):
     data = []
     i = 0
     
@@ -15,73 +65,100 @@ def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None):
         if isinstance(rglob_exclude, str):
             if rglob_exclude.lower() in str(fname).lower():
                 continue
+
+        columns_out =  list(Model.model_fields.keys()) + list(Model.model_computed_fields.keys())
+        if attach_path_attributes:
+            attr = get_attr_from_path(ipath)
+            columns_out = ['company','report_period','driver_type']+columns_out
         
-        permit_type = 'drivered'
-        company = None
-        
-        for c in companies:
-            if c in str(fname):
-                if isinstance(company, str):
-                    raise Exception('more than one valid company name found: {}, {}'.format(c, company))
-                company = c
-    
-        if 'driverless' in str(fname).lower():
-            permit_type = 'driverless'
-        
-        #print(fname)
-        #print('company: {}, permit type: {}'.format(company, permit_type))
-        
-        with open(fname) as f:
+        with open(fname, encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)        
             for row in reader:        
-                # validate
-                #trip = Model(**row).model_dump().values()
-                #data.append([company, permit_type] + list(trip))
-                try:
-                    trip = Model(**row).model_dump().values()
-                    data.append([company, permit_type] + list(trip))
-                except Exception as e:
-                    print('WARNING: could not parse {}'.format(fname))
-                    print(row)
-                    print(e)
-                    break
 
-    return (
-        pd.DataFrame(columns = ['company','permit_type'] + list(Model.model_fields.keys()) + list(Model.model_computed_fields.keys()),
-                     data = data)
-    )
+                is_empty = True
+                for value in row.values():
+                    if value.strip() != '':
+                        is_empty = False
+
+                if is_empty:
+                    continue
+                # validate
+                trip = Model(**row).model_dump().values()
+                row_out = list(trip)
+                if attach_path_attributes:
+                    row_out = [attr['company'],attr['report_period'],attr['driver_type']] + row_out
+                data.append(row_out)
+
+    return (pd.DataFrame(columns=columns_out, data=data))
 
 if __name__=='__main__':
-     INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment'
-     companies = ['Cruise','Waymo']
+    INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment'
+    EXTRACTED = Path(INDIR) / 'extracted'
+    INTERIM = Path(INDIR) / 'preprocessed'
+    VALIDATED = Path(INDIR) / 'validated'
      
-     # custom preprocess
-     df = pd.read_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Incidents-Location_Part0-Public.csv')
-     df['Quarter'] = 4
-     df.to_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Incidents-Location_Part0-Public-SFCTA.csv',
-               index=False)
-     
-     df = pd.read_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Chargers_Part0-Public.csv')
-     df['Quarter'] = 4
-     df.to_csv(Path(INDIR) / '2024-12-01_2024-12-31/Waymo/Waymo Dep Dec 2024 Driverless Public/PSG0038152_2025_02_(Dec_1-Dec_31)_AV_Chargers_Part0-Public-SFCTA.csv',
-               index=False)
-     
+    preprocess_dir(
+        idir=INDIR, 
+        odir=INTERIM,
+        rglob_pattern='*.csv', 
+        fuzzy=True,
+        rglob_exclude='reference',
+        )
+    
+    custom_preprocess(INTERIM) # includes hard-coded paths
 
-     month = read_and_validate_dir(
-          directory=INDIR, 
-          rglob_pattern='*Month*.csv', 
-          Model=Month, 
-          rglob_exclude='tract'
-          )
-     
-     tract = read_and_validate_dir(
-          directory=INDIR, 
-          rglob_pattern='*Tract*.csv', 
-          Model=TripTract, 
-          )
-     
-     incident_tract = read_and_validate_dir(
-          directory=INDIR, 
-          rglob_pattern='*Location*.csv', 
-          Model=IncidentTract, 
-          )
+    trip = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='Trip.csv',
+        Model=Trip, 
+        )
+    trip.to_csv(VALIDATED / 'Trip.csv', index=False)
+
+    trip_tract = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='TripTract.csv', 
+        Model=TripTract, 
+        )
+    trip_tract.to_csv(VALIDATED / 'TripTract.csv', index=False)
+    
+    month = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='Month.csv', 
+        Model=Month, 
+        )
+    month.to_csv(VALIDATED / 'Month.csv', index=False)
+    
+    incident_tract = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='Location.csv', 
+        Model=IncidentTract, 
+        )
+    incident_tract.to_csv(VALIDATED / 'IncidentTract.csv', index=False)
+
+    incident = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='Incident.csv', 
+        Model=Incident,
+        )
+    incident.to_csv(VALIDATED / 'Incident.csv', index=False)
+
+    incident_legacy = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='IncidentLegacy.csv', 
+        Model=IncidentLegacy,
+        )
+    incident_legacy.to_csv(VALIDATED / 'IncidentLegacy.csv', index=False)
+
+    charger = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='Charger.csv', 
+        Model=Charger, 
+        )
+    charger.to_csv(VALIDATED / 'Charger.csv', index=False)
+
+    charging_session = read_and_validate_dir(
+        directory=INTERIM, 
+        rglob_pattern='ChargingSession.csv', 
+        Model=ChargingSession, 
+        )
+    charging_session.to_csv(VALIDATED / 'ChargingSession.csv', index=False)
