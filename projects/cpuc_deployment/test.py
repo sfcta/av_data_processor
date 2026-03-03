@@ -2,10 +2,37 @@
 import pandas as pd
 import csv, re
 from shutil import copyfile
-from data_models.cpuc_deployment.reports import Trip, Month, TripTract, IncidentTract, Incident, IncidentLegacy, Charger, ChargingSession
+from data_models.cpuc_deployment.reports import (Trip, Month, TripTract, IncidentTract, Incident, IncidentLegacy, 
+                                                 Charger, ChargingSession, Stoppage, StoppageFleet)
 from pathlib import Path
 from datetime import datetime
-from utils.helpers import get_file_model, get_opath_from_ipath, get_header_rename_dict, copy_and_rename_headers, get_attr_from_path
+from utils.helpers import (get_opath_from_ipath, get_header_rename_dict, copy_and_rename_headers, 
+                           get_attr_from_path, get_header, header_model_match_ratio)
+
+def get_file_model(ifile, min_header_ratio=0.80, drop_unaliased=True, fuzzy=False, min_fuzzy_ratio=0.50):
+    '''
+    read in a file header, compare it to each model's aliases, and return the one that matches
+    '''
+    header = get_header(ifile) 
+
+    best_r = 0
+    best_M = None
+    for M in [Trip, TripTract, Month, Incident, IncidentTract, IncidentLegacy, Charger, ChargingSession, Stoppage, StoppageFleet]:
+        r = header_model_match_ratio(header, 
+                                     M, 
+                                     drop_unaliased=drop_unaliased,
+                                     min_header_ratio=min_header_ratio,
+                                     fuzzy=fuzzy,
+                                     min_fuzzy_ratio=min_fuzzy_ratio
+                                    )
+        if r == 1:
+            return M
+
+        elif r > best_r and r > min_header_ratio:
+            best_r = r
+            best_M = M
+
+    return best_M
 
 def custom_preprocess(root):
     # This is missing TCPID, insert it and fill it with 'MISSING FIELD'
@@ -61,25 +88,25 @@ def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None, a
     
     start = datetime.now()
     
+    columns =  list(Model.model_fields.keys()) + list(Model.model_computed_fields.keys())
+    if attach_path_attributes:
+        columns = ['company','report_period','driver_type']+columns
+
     for fname in sorted(Path(directory).rglob(rglob_pattern)):
         if isinstance(rglob_exclude, str):
             if rglob_exclude.lower() in str(fname).lower():
                 continue
-
-        columns_out =  list(Model.model_fields.keys()) + list(Model.model_computed_fields.keys())
-        if attach_path_attributes:
-            attr = get_attr_from_path(ipath)
-            columns_out = ['company','report_period','driver_type']+columns_out
         
+        if attach_path_attributes:
+            attr = get_attr_from_path(fname)
+            
         with open(fname, encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)        
             for row in reader:        
-
                 is_empty = True
                 for value in row.values():
                     if value.strip() != '':
                         is_empty = False
-
                 if is_empty:
                     continue
                 # validate
@@ -89,7 +116,7 @@ def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None, a
                     row_out = [attr['company'],attr['report_period'],attr['driver_type']] + row_out
                 data.append(row_out)
 
-    return (pd.DataFrame(columns=columns_out, data=data))
+    return (pd.DataFrame(columns=columns, data=data))
 
 if __name__=='__main__':
     INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment'
@@ -98,7 +125,7 @@ if __name__=='__main__':
     VALIDATED = Path(INDIR) / 'validated'
      
     preprocess_dir(
-        idir=INDIR, 
+        idir=EXTRACTED, 
         odir=INTERIM,
         rglob_pattern='*.csv', 
         fuzzy=True,

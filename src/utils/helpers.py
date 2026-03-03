@@ -4,6 +4,7 @@ from typing import Any
 from math import nan, isnan
 from fuzzywuzzy import fuzz
 from pathlib import Path
+from utils.regex import redacted_re, na_re
 
 def get_aliases(Model, drop_unaliased=True, required_only=False):
     aliases = []
@@ -22,31 +23,6 @@ def get_header(ifile, drop_unnamed=True):
         if not 'Unnamed:' == c[:8]:
             header.append(c)
     return header
-
-def get_file_model(ifile, min_header_ratio=0.80, drop_unaliased=True, fuzzy=False, min_fuzzy_ratio=0.50):
-    '''
-    read in a file header, compare it to each model's aliases, and return the one that matches
-    '''
-    header = get_header(ifile) 
-
-    best_r = 0
-    best_M = None
-    for M in [Trip, TripTract, Month, Incident, IncidentTract, IncidentLegacy, Charger, ChargingSession, Stoppage, StoppageFleet]:
-        r = header_model_match_ratio(header, 
-                                     M, 
-                                     drop_unaliased=drop_unaliased,
-                                     min_header_ratio=min_header_ratio,
-                                     fuzzy=fuzzy,
-                                     min_fuzzy_ratio=min_fuzzy_ratio
-                                    )
-        if r == 1:
-            return M
-
-        elif r > best_r and r > min_header_ratio:
-            best_r = r
-            best_M = M
-
-    return best_M
 
 def header_model_match_ratio(header, Model, min_header_ratio=0.80, fuzzy=False, min_fuzzy_ratio=0.50, drop_unaliased=True, required_only=True):
     aliases = get_aliases(Model, drop_unaliased, required_only)
@@ -234,9 +210,11 @@ def coerce_str_to_number(x: Any) -> Any:
 def primary_type_or_na_or_redacted(value, primary_type):
     if isinstance(value, primary_type):
         return value
-    elif isinstance(value, str) and (value.upper() == 'REDACTED' or value.upper() == 'NOT APPLICABLE'):
+    value = value.strip()    
+    if re.compile(redacted_re).fullmatch(value) or re.compile(na_re).fullmatch(value):
         return value
-    raise ValueError('{} is not type {} or str `REDACTED`'.format(value, primary_type))
+        
+    raise ValueError('{} is not type {} or a match for {} or {}'.format(value, primary_type, redacted_re, na_re))
 
 def primary_type_or_redacted(value, primary_type):
     if isinstance(value, str) and value.upper() == 'REDACTED':

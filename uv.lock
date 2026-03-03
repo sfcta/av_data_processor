@@ -125,6 +125,65 @@ wheels = [
 ]
 
 [[package]]
+name = "av-dashboard"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "fuzzywuzzy" },
+    { name = "geopandas" },
+    { name = "numpy" },
+    { name = "openpyxl" },
+    { name = "pandas" },
+    { name = "pydantic" },
+    { name = "toml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "jupyter" },
+    { name = "kaleido" },
+    { name = "matplotlib" },
+    { name = "plotly" },
+    { name = "pre-commit" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "tabulate" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fuzzywuzzy", specifier = ">=0.18.0" },
+    { name = "geopandas", specifier = ">=1.1.1" },
+    { name = "numpy", specifier = ">=2.3.4" },
+    { name = "openpyxl", specifier = ">=3.1.5" },
+    { name = "pandas", specifier = ">=2.3.3" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "toml", specifier = ">=0.10.2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=25.12.0" },
+    { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "kaleido", specifier = ">=1.2.0" },
+    { name = "matplotlib", specifier = ">=3.10.8" },
+    { name = "plotly", specifier = ">=6.4.0" },
+    { name = "pre-commit", specifier = ">=0.0" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "ruff", specifier = ">=0.14.3" },
+    { name = "tabulate", specifier = ">=0.9.0" },
+]
+test = [
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+]
+
+[[package]]
 name = "babel"
 version = "2.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -579,63 +638,6 @@ toml = [
 ]
 
 [[package]]
-name = "cpuc-av-quarterly-reports"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "geopandas" },
-    { name = "numpy" },
-    { name = "openpyxl" },
-    { name = "pandas" },
-    { name = "pydantic" },
-    { name = "toml" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-    { name = "jupyter" },
-    { name = "kaleido" },
-    { name = "matplotlib" },
-    { name = "plotly" },
-    { name = "pre-commit" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "tabulate" },
-]
-test = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "geopandas", specifier = ">=1.1.1" },
-    { name = "numpy", specifier = ">=2.3.4" },
-    { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "pandas", specifier = ">=2.3.3" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "toml", specifier = ">=0.10.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=25.12.0" },
-    { name = "jupyter", specifier = ">=1.1.1" },
-    { name = "kaleido", specifier = ">=1.2.0" },
-    { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "plotly", specifier = ">=6.4.0" },
-    { name = "pre-commit", specifier = ">=0.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "ruff", specifier = ">=0.14.3" },
-    { name = "tabulate", specifier = ">=0.9.0" },
-]
-test = [
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-]
-
-[[package]]
 name = "cycler"
 version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -788,6 +790,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/30/3e/a80a8c077fd798951169626cde3e239adeba7dab75deb3555716415bd9b0/fqdn-1.5.1.tar.gz", hash = "sha256:105ed3677e767fb5ca086a0c1f4bb66ebc3c100be518f0e0d755d9eae164d89f", size = 6015, upload-time = "2021-03-11T07:16:29.08Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014", size = 9121, upload-time = "2021-03-11T07:16:28.351Z" },
+]
+
+[[package]]
+name = "fuzzywuzzy"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/4b/0a002eea91be6048a2b5d53c5f1b4dafd57ba2e36eea961d05086d7c28ce/fuzzywuzzy-0.18.0.tar.gz", hash = "sha256:45016e92264780e58972dca1b3d939ac864b78437422beecebb3095f8efd00e8", size = 28888, upload-time = "2020-02-13T21:06:27.054Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/ff/74f23998ad2f93b945c0309f825be92e04e0348e062026998b5eefef4c33/fuzzywuzzy-0.18.0-py2.py3-none-any.whl", hash = "sha256:928244b28db720d1e0ee7587acf660ea49d7e4c632569cad4f1cd7e68a5f0993", size = 18272, upload-time = "2020-02-13T21:06:25.209Z" },
 ]
 
 [[package]]
