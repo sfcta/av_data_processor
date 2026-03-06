@@ -39,18 +39,21 @@ def custom_preprocess(root):
     f = Path(root) / '2023-09-01_2023-11-30/waymo/driverless/Month.csv'
     df = pd.read_csv(f)
     df.insert(0, 'TCPID', 'MISSING FIELD')
+    df['TotalWAVsAvail'] = 'MISSING FIELD'
+    df['TotalWAVsRequested'] = 'MISSING FIELD'
+    df['TotalWAVsDeclinedUnavail'] = 'MISSING FIELD'
+    df['TotalWAVsFulfilled'] = 'MISSING FIELD'
+    df.to_csv(f, index=False)
+
+    f = Path(root) / '2023-09-01_2023-11-30/cruise/driverless/IncidentLegacy.csv'
+    df = pd.read_csv(f)
+    df = df.iloc[0:1]
     df.to_csv(f, index=False)
 
     # TCP is unlabeled in the header, label it
     f = Path(root) / '2022-09-01_2022-11-30/waymo/drivered/IncidentTract.csv'
     df = pd.read_csv(f)
-    df.rename(columns={'':'TCPID'}, inplace=True)
-    df.to_csv(f, index=False)
-
-    # This is missing TCPID, insert it and fill it with 'MISSING FIELD'
-    f = Path(root) / '2022-09-01_2022-11-30/waymo/drivered/IncidentTract.csv'
-    df = pd.read_csv(f)
-    df.insert(0, 'TCPID', 'MISSING FIELD')
+    df.rename(columns={'Unnamed: 0':'TCPID'}, inplace=True)
     df.to_csv(f, index=False)
 
 def preprocess_dir(idir, odir, rglob_pattern, file_pattern='.*', rglob_exclude=None, fuzzy=False):
