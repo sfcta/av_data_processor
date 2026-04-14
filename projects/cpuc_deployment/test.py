@@ -122,7 +122,7 @@ def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None, a
     return (pd.DataFrame(columns=columns, data=data))
 
 if __name__=='__main__':
-    INDIR = r'Q:\Data\Regulatory\AV\CPUC\Quarterly Reports\Deployment'
+    INDIR = 'Q:/Data/Regulatory/AV/CPUC/Quarterly Reports/Deployment'
     EXTRACTED = Path(INDIR) / 'extracted'
     INTERIM = Path(INDIR) / 'preprocessed'
     VALIDATED = Path(INDIR) / 'validated'
