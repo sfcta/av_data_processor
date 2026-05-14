@@ -138,7 +138,7 @@ class Month(BaseModel):
     @property
     def deadhead_rate(self) -> float:
         if self.vmt > 0:
-            return self.vmt_p3 / (self.vmt)    
+            return (1 - self.vmt_p3 / (self.vmt) )   
         else:
             return nan
 
