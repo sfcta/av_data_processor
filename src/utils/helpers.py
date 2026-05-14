@@ -16,8 +16,8 @@ def get_aliases(Model, drop_unaliased=True, required_only=False):
                 aliases.append(field)
     return aliases
 
-def get_header(ifile, drop_unnamed=True):
-    df = pd.read_csv(ifile, nrows=0)
+def get_header(ifile, encoding=None, drop_unnamed=True):
+    df = pd.read_csv(ifile, encoding=encoding, nrows=0)
     header = []
     for c in df.columns:
         if not 'Unnamed:' == c[:8]:
@@ -31,8 +31,14 @@ def header_model_match_ratio(header, Model, min_header_ratio=0.80, fuzzy=False, 
     expected_matches = len(header)
 
     if expected_matches == 0:
+        print('no expected matches')
         return 0
     
+    # hack for dmv first-time-filer files
+    if (len(aliases) / expected_matches) < min_header_ratio:
+        #print('aliases: {}, expected: {}'.format(len(aliases), expected_matches))
+        return (len(aliases) / expected_matches)
+
     for name in header:
         best_r = 0
         best_alias = None
@@ -108,10 +114,33 @@ def get_attr_from_path(path):
         meta['driver_type'] = 'driverless'
     elif 'drivered' in str(path).lower():
         meta['driver_type'] = 'drivered'
-    elif meta['report_period'] < '2023-09-01':
+    elif meta['report_period'] < '2023-06-01' and meta['company'].lower() == 'waymo':
+        meta['driver_type'] = 'drivered'
+    elif meta['report_period'] < '2022-06-01' and meta['company'].lower() == 'cruise':
         meta['driver_type'] = 'drivered'
     else:
         meta['driver_type'] = 'driverless'
+
+    return meta
+
+def get_dmv_attr_from_filepath(path):
+    meta_re = r'.*[\\/](?P<year>\d{4})[\\/][a-zA-Z0-9-_\s]*(?P<report_type>([Mm][Ii][Ll][Ee][Aa][Gg][Ee])|([Dd][Ii][Ss][Ee][Nn][Gg][Aa][Gg][Ee][Mm][Ee][Nn][Tt]))[a-zA-Z0-9-_\s\(\)]*.csv'
+    compiled_meta_re = re.compile(meta_re)
+    
+    try:
+        meta = compiled_meta_re.match(str(path)).groupdict()
+    except:
+        raise Exception('No attr match for {}'.format(path))
+
+    if 'driverless' in str(path).lower():
+        meta['driver_type'] = 'driverless'
+    else:
+        meta['driver_type'] = 'drivered'
+
+    if 'first' in str(path).lower():
+        meta['first_time'] = 'first_time'
+    else:
+        meta['first_time'] = 'ongoing'
 
     return meta
 
