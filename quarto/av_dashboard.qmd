@@ -114,6 +114,7 @@ company_county_pattern_map = {
     'Cruise Unidentified (Driverless)':None,
 }
 
+crash_bubble_color = '#c1121f'
 warm_sunset = [
     '#faa275', # none
     '#ff8c61', # minor
@@ -159,6 +160,8 @@ lavender_map = {
     'Unknown':'#eff1ed',
 }
 
+severity_order = ['No Injuries Reported','Minor','Moderate','Serious','Fatality','Unknown']
+
 trip_long = pd.read_csv(Path(INDIR) / 'trips_by_company_and_permit_type (deploy only) long.csv')
 vmt_long = pd.read_csv(Path(INDIR) / 'vmt_by_company_and_permit_type_long.csv')
 trip_county_long = pd.read_csv(Path(INDIR) / 'deployment_trips_by_county.csv')
@@ -171,6 +174,13 @@ crash_state_sf = pd.read_csv(Path(INDIR) / 'crash_state_sf.csv')
 crash_sf_sev = pd.read_csv(Path(INDIR) / 'crash_sf_sev.csv')
 crash_sf_comp = pd.read_csv(Path(INDIR) / 'crash_sf_comp.csv')
 crash_ca_comp_sev = pd.read_csv(Path(INDIR) / 'crash_ca_comp_sev.csv')
+crash_geo_sev = pd.read_csv(Path(INDIR) / 'crash_geo_sev.csv')
+crash_geo_comp = pd.read_csv(Path(INDIR) / 'crash_geo_comp.csv')
+
+severity_order = ['No Injuries Reported','Minor','Moderate','Serious','Fatality','Unknown']
+
+crash = pd.read_csv(r'Q:\Data\Regulatory\AV\NHTSA\processed\nhtsa_ads_crashes.csv')
+comp_crashtot_descending = crash.groupby('operating_entity').size().sort_values(ascending=False).index.tolist()
 ```
 
 ## Row
@@ -358,6 +368,89 @@ fig8.update_layout(
 ## Row
 
 ```{python}
+#| title: Crashes by Severity
+
+fig9 = px.scatter_map(
+    crash_geo_sev,
+    lat='lat',
+    lon='lng',
+    size='Total',
+    #color='Total',
+    #color_continuous_scale='orrd',
+    color_discrete_sequence=['#c1121f'],
+    size_max=70,
+    hover_name='city',
+    hover_data=severity_order,
+    
+    zoom=3
+).update_layout(
+    map_style="basic",
+    margin={"r":0,"t":0,"l":0,"b":0},
+    updatemenus=[
+        dict(
+            buttons=list([
+                dict(
+                    args=[{"marker.size":crash_geo_sev[severity].to_numpy()}],
+                    label=severity,
+                    method="restyle",
+                ) for severity in ['Total'] + severity_order
+            ]),
+            bgcolor=None,
+            direction="down",
+            showactive=True,
+            x=0.025,
+            xanchor="left",
+            y=0.975,
+            yanchor="top"
+        ),
+    ]
+)
+fig9.show()
+```
+
+```{python}
+#| title: Crashes by Company
+
+fig10 = px.scatter_map(
+    crash_geo_comp,
+    lat='lat',
+    lon='lng',
+    size='Total',
+    #color='Total',
+    #color_continuous_scale='orrd',
+    color_discrete_sequence=['#003049'],
+    size_max=70,
+    hover_name='city',
+    hover_data=comp_crashtot_descending[:5],
+    zoom=3
+).update_layout(
+    map_style="basic",
+    margin={"r":0,"t":0,"l":0,"b":0},
+    updatemenus=[
+        dict(
+            buttons=list([
+                dict(
+                    args=[{"marker.size":crash_geo_comp[company].to_numpy()}],
+                    label=company,
+                    method="restyle"
+                ) for company in comp_crashtot_descending 
+            ]),
+            direction="down",
+            showactive=True,
+            x=0.025,
+            xanchor="left",
+            y=0.975,
+            yanchor="top",
+        ),
+    ]
+)
+fig10.show()
+```
+
+
+## Row
+
+```{python}
 #| title: Crashes by State (and San Francisco)
 
 px.bar(
@@ -368,16 +461,17 @@ px.bar(
     color_discrete_sequence=[
         '#d6d6d6', #'#d4c5de',
         '#ffd100',#'#e95e50',
-    ] + 16 * ['#d6d6d6'],
+    ] + 17 * ['#d6d6d6'],
 )
 ```
+
 
 ```{python}
 #| title: Crashes by City
 
 px.pie(
     crash_city,
-    names='city',
+    names='city_top10',
     values='size'
 )
 ```
