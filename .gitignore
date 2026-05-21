@@ -2,7 +2,8 @@
 notebooks/
 
 # quarto
-quarto/
+quarto/*
+!quarto/av_dashboard.qmd
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

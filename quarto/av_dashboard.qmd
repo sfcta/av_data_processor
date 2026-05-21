@@ -1,0 +1,422 @@
+---
+title: California AV Data Dashboard
+author: Drew Cooper (SFCTA)
+format: 
+    dashboard:
+        scrolling: true
+---
+
+# Trips and Mileage
+
+```{python}
+import pandas as pd
+from pathlib import Path
+import datetime
+import plotly.express as px
+import plotly.graph_objects as go
+
+INDIR = 'Q:/Model Research/AV_Resource_Portal/data'
+color_set_a = ['#ff5e5b', '#00cecb', '#ffed66', '#ffffea', '#d8d8d8']
+light_color_set_a = ['#ff9e9d', '#64e4e2', '#fff4a3', '#fffff2', '#e8e8e8']
+
+color_set_b = ['#FFC857','#E9724C','#C5283D','#481D24','#255F85']
+
+color_set_c = ['#0cb2af','#a1c65d','#fac723','#f29222','#e95e50','#936fac']
+color_set_c_light = ['#87f7f5','#d9e8be','#fde9a7','#fad3a7','#f6bfb9','#d4c5de']
+color_set_d = ['#264653','#287271','#2a9d8f','#e9c46a','#f4a261','#e76f51']
+
+company_permit_type_color_map = {
+    'Waymo DMV Testing Drivered':light_color_set_a[0],
+    'Waymo DMV Testing Driverless':light_color_set_a[0],
+    'Waymo CPUC Deployment Drivered':color_set_a[0],
+    'Waymo CPUC Deployment Driverless':color_set_a[0],
+    'Cruise DMV Testing Drivered':light_color_set_a[1],
+    'Cruise DMV Testing Driverless':light_color_set_a[1],
+    'Cruise CPUC Deployment Drivered':color_set_a[1],
+    'Cruise CPUC Deployment Driverless':color_set_a[1],
+    'Zoox DMV Testing Drivered':light_color_set_a[2],
+    'Zoox DMV Testing Driverless':light_color_set_a[2],
+    'Zoox CPUC Deployment Drivered':color_set_a[2],
+    'Zoox CPUC Deployment Driverless':color_set_a[2],
+    'All Others Combined DMV Testing Drivered':light_color_set_a[3],
+    'All Others Combined DMV Testing Driverless':light_color_set_a[3],
+    'All Others Combined CPUC Deployment Drivered':color_set_a[3],
+    'All Others Combined CPUC Deployment Driverless':color_set_a[3],
+}
+company_permit_type_dash_map = {
+    'Waymo DMV Testing Drivered':'dot',
+    'Waymo DMV Testing Driverless':None,
+    'Waymo CPUC Deployment Drivered':'dot',
+    'Waymo CPUC Deployment Driverless':None,
+    'Cruise DMV Testing Drivered':'dot',
+    'Cruise DMV Testing Driverless':None,
+    'Cruise CPUC Deployment Drivered':'dot',
+    'Cruise CPUC Deployment Driverless':None,
+    'Zoox DMV Testing Drivered':'dot',
+    'Zoox DMV Testing Driverless':None,
+    'Zoox CPUC Deployment Drivered':'dot',
+    'Zoox CPUC Deployment Driverless':None,
+    'All Others Combined DMV Testing Drivered':'dot',
+    'All Others Combined DMV Testing Driverless':None,
+    'All Others Combined CPUC Deployment Drivered':'dot',
+    'All Others Combined CPUC Deployment Driverless':None,
+}
+
+company_county_color_map = {
+    'Waymo San Francisco':color_set_c[0],
+    'Waymo Los Angeles':color_set_c[1],
+    'Waymo San Mateo':color_set_c[2],
+    #'Waymo Santa Clara (Drivered)':color_set_c[3],
+    #'Waymo Santa Clara (Driverless)':color_set_c[3],
+    #'Waymo Santa Cruz (Drivered)':color_set_c[4],
+    #'Waymo Santa Cruz (Driverless)':color_set_c[4],
+    'Cruise San Francisco':color_set_c[3],
+    'Waymo Unidentified':color_set_c[4],
+    #'Cruise Unidentified':color_set_c[5],
+}
+
+#company_county_color_map = {
+#    'Waymo San Francisco (Drivered)':color_set_c_light[0],
+#    'Waymo San Francisco (Driverless)':color_set_c[0],
+#    'Waymo Los Angeles (Drivered)':color_set_c_light[1],
+#    'Waymo Los Angeles (Driverless)':color_set_c[1],
+#    'Waymo San Mateo (Drivered)':color_set_c_light[2],
+#    'Waymo San Mateo (Driverless)':color_set_c[2],
+#    #'Waymo Santa Clara (Drivered)':color_set_c[3],
+#    #'Waymo Santa Clara (Driverless)':color_set_c[3],
+#    #'Waymo Santa Cruz (Drivered)':color_set_c[4],
+#    #'Waymo Santa Cruz (Driverless)':color_set_c[4],
+#    'Cruise San Francisco (Drivered)':color_set_c_light[3],
+#    'Cruise San Francisco (Driverless)':color_set_c[3],
+#    'Waymo Unidentified (Drivered)':color_set_c_light[4],
+#    'Waymo Unidentified (Driverless)':color_set_c[4],
+#    'Cruise Unidentified (Drivered)':color_set_c_light[5],
+#    'Cruise Unidentified (Driverless)':color_set_c[5],
+#}
+
+
+company_county_pattern_map = {
+    'Waymo San Francisco (Drivered)':'/',
+    'Waymo San Francisco (Driverless)':None,
+    'Waymo Los Angeles (Drivered)':'/',
+    'Waymo Los Angeles (Driverless)':None,
+    'Waymo San Mateo (Drivered)':'/',
+    'Waymo San Mateo (Driverless)':None,
+    #'Waymo Santa Clara (Drivered)':'/',
+    #'Waymo Santa Clara (Driverless)':None,
+    #'Waymo Santa Cruz (Drivered)':'/',
+    #'Waymo Santa Cruz (Driverless)':None,
+    'Cruise San Francisco (Drivered)':'/',
+    'Cruise San Francisco (Driverless)':None,
+    'Waymo Unidentified (Drivered)':'/',
+    'Waymo Unidentified (Driverless)':None,
+    'Cruise Unidentified (Drivered)':'/',
+    'Cruise Unidentified (Driverless)':None,
+}
+
+warm_sunset = [
+    '#faa275', # none
+    '#ff8c61', # minor
+    '#ce6a85', # moderate
+    '#985277', # serious
+    '#5c374c', # fatal
+    '#eff1ed', # unknown
+]
+
+warm_sunset_map = {
+    'No Injuries Reported':'#faa275',
+    'Minor':'#ff8c61',
+    'Moderate':'#ce6a85',
+    'Serious':'#985277',
+    'Fatality':'#5c374c',
+    'Unknown':'#eff1ed',
+}
+
+warm_rustic_map = {
+    'No Injuries Reported':'#585123',
+    'Minor':'#eec170',
+    'Moderate':'#f2a65a',
+    'Serious':'#f58549',
+    'Fatality':'#772f1a',
+    'Unknown':'#eff1ed',
+}
+
+coral_map = {
+    'No Injuries Reported':'#ffe3e0',
+    'Minor':'#fbc3bc',
+    'Moderate':'#f7a399',
+    'Serious':'#f38375',
+    'Fatality':'#ef6351',
+    'Unknown':'#eff1ed',
+}
+
+lavender_map = {
+    'No Injuries Reported':'#f5e6e8',
+    'Minor':'#d5c6e0',
+    'Moderate':'#aaa1c8',
+    'Serious':'#967aa1',
+    'Fatality':'#192a51',
+    'Unknown':'#eff1ed',
+}
+
+trip_long = pd.read_csv(Path(INDIR) / 'trips_by_company_and_permit_type (deploy only) long.csv')
+vmt_long = pd.read_csv(Path(INDIR) / 'vmt_by_company_and_permit_type_long.csv')
+trip_county_long = pd.read_csv(Path(INDIR) / 'deployment_trips_by_county.csv')
+waymo_period_vmt = pd.read_csv(Path(INDIR) / 'waymo_driverless_deployment_period_vmt.csv')
+cruise_period_vmt = pd.read_csv(Path(INDIR) / 'cruise_driverless_deployment_period_vmt.csv')
+
+crash_state = pd.read_csv(Path(INDIR) / 'crash_state.csv')
+crash_city = pd.read_csv(Path(INDIR) / 'crash_city.csv')
+crash_state_sf = pd.read_csv(Path(INDIR) / 'crash_state_sf.csv')
+crash_sf_sev = pd.read_csv(Path(INDIR) / 'crash_sf_sev.csv')
+crash_sf_comp = pd.read_csv(Path(INDIR) / 'crash_sf_comp.csv')
+crash_ca_comp_sev = pd.read_csv(Path(INDIR) / 'crash_ca_comp_sev.csv')
+```
+
+## Row
+
+```{python}
+#| title: California AV Trips by Company and Permit Type
+
+fig1 = px.line(
+    trip_long.loc[:,['date','label','trips']], 
+    x='date', 
+    y='trips',
+    color='label',
+    color_discrete_map=company_permit_type_color_map,
+    line_dash='label',
+    line_dash_map=company_permit_type_dash_map,
+    #height=500,
+)
+fig1.update_layout(
+    legend=dict(
+        title='',
+        orientation='h'
+        )
+    )
+
+#| fig-cap: *TODO*
+``` 
+
+```{python}
+#| title: Driverless Deployment Trips by Company and County
+
+fig3 = px.bar(
+    trip_county_long.loc[:,['date','label','trips_start']], 
+    x='date', 
+    y='trips_start',
+    color='label',
+    color_discrete_map=company_county_color_map,
+    #height=500,
+).update_traces(
+    dict(#marker_line_width=2.0,
+         #marker_line_color=color_set_c[4],
+         #marker_color=color_set_c_light[4],
+         #marker_pattern_fgcolor=color_set_c[4],
+         marker_pattern_fgcolor=color_set_c_light[4],
+         marker_pattern_shape='/',
+         opacity=0.75
+        ),
+    selector=({'legendgroup':'Waymo Unidentified'}),
+)
+
+fig3.update_layout(
+    legend=dict(
+        title='',
+        orientation='h'
+        )
+    )
+``` 
+
+## Row
+
+```{=html}
+<div class="card">
+  <div class="card-header">Waymo Driverless Deployment Trips 2023-2024 (San Francisco)</div>
+  <div class="card-body">
+    <iframe id="scaled-frame" src="https://sfcta.github.io/report-tncs2020-simwrapper/files/simwrapper-data/reports/av_dashboard/viz-map-san-francisco.yaml?embed" height=100%></iframe>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Waymo Driverless Deployment Trips 2023-2024 (Los Angeles)</div>
+  <div class="card-body">
+    <iframe id="scaled-frame" src="https://sfcta.github.io/report-tncs2020-simwrapper/files/simwrapper-data/reports/av_dashboard/viz-map-los-angeles.yaml?embed" height=100%></iframe>
+  </div>
+</div>
+```
+
+## Row
+
+```{python}
+#| title: VMT by Company and Permit Type
+
+fig4 = px.line(
+    vmt_long.loc[:,['date','label','vmt']], 
+    x='date', 
+    y='vmt',
+    color='label',
+    color_discrete_map=company_permit_type_color_map,
+    line_dash='label',
+    line_dash_map=company_permit_type_dash_map,
+    #height=500,
+)
+
+fig4.update_layout(
+    legend=dict(
+        title='',
+        orientation='h'
+        )
+    )
+```
+
+## Row
+
+```{python}
+#| title: Waymo Driverless Deployment VMT by Phase
+
+fig5 = px.area(
+    waymo_period_vmt.loc[:,['date','label','period_vmt']], 
+    x='date', 
+    y='period_vmt',
+    color='label',
+)
+
+fig5.update_layout(
+    legend=dict(
+        title='',
+        orientation='h'
+        )
+    )
+```
+
+```{python}
+#| title: Cruise Driverless Deployment VMT by Phase
+
+fig6 = px.area(
+    cruise_period_vmt.loc[:,['date','label','period_vmt']], 
+    x='date', 
+    y='period_vmt',
+    color='label',
+)
+fig6.update_layout(
+    legend=dict(
+        title='',
+        orientation='h'
+        ),
+    )
+```
+
+## Row
+```{python}
+#| title: Driverless Deployment PMT/VMT by Company and Permit Type
+
+fig7 = px.line(
+    trip_long.loc[:,['date','label','pmt_over_vmt']], 
+    x='date', 
+    y='pmt_over_vmt',
+    color='label',
+    color_discrete_map=company_permit_type_color_map,
+    line_dash='label',
+    line_dash_map=company_permit_type_dash_map,
+)
+
+fig7.update_layout(
+    legend=dict(
+        title='',
+        orientation='h'
+        )
+    )
+```
+
+```{python}
+#| title: Driverless Deployment Deadhead Rate by Company and Permit Type
+
+fig8 = px.line(
+    trip_long.loc[:,['date','label','deadhead_rate']], 
+    x='date', 
+    y='deadhead_rate',
+    color='label',
+    color_discrete_map=company_permit_type_color_map,
+    line_dash='label',
+    line_dash_map=company_permit_type_dash_map,
+)
+
+fig8.update_layout(
+    legend=dict(
+        title='',
+        orientation='h',
+        ),
+    yaxis=dict(
+        range=(0,1)
+    )
+    )
+```
+
+# Safety
+
+## Row
+
+```{python}
+#| title: Crashes by State (and San Francisco)
+
+px.bar(
+    crash_state_sf.loc[:,['state_or_city','size']], 
+    x='state_or_city', 
+    y='size', 
+    color='state_or_city',
+    color_discrete_sequence=[
+        '#d6d6d6', #'#d4c5de',
+        '#ffd100',#'#e95e50',
+    ] + 16 * ['#d6d6d6'],
+)
+```
+
+```{python}
+#| title: Crashes by City
+
+px.pie(
+    crash_city,
+    names='city',
+    values='size'
+)
+```
+
+## Row
+
+```{python}
+#| title: Crashes by Company and Severity (California)
+
+px.bar(
+    crash_ca_comp_sev,
+    x='operating_entity',
+    y='size',
+    color='highest_injury_severity_alleged_legacy',
+    color_discrete_map= lavender_map,
+    category_orders = {'highest_injury_severity_alleged_legacy':['No Injuries Reported','Minor','Moderate','Serious','Fatality','Unknown']}
+)
+```
+
+## Row
+
+```{python}
+#| title: Crashes in San Francisco by Severity
+
+px.bar(
+    crash_sf_sev.loc[:,['highest_injury_severity_alleged_legacy','size']], 
+    x='highest_injury_severity_alleged_legacy', 
+    y='size', 
+    #color='highest_injury_severity_alleged_legacy',
+    #color_discrete_map= lavender_map,
+)
+```
+
+```{python}
+#| title: Crashes in San Francisco by Company
+
+px.bar(
+    crash_sf_comp.loc[:,['operating_entity','size']], 
+    x='operating_entity', 
+    y='size', 
+)
+```
