@@ -255,3 +255,14 @@ class VMTWideFirstTime(BaseModel):
     @property
     def total_vmt(self) -> float:
         return numeric_str_to_float(self.total_vmt_str)
+    
+class VMT(BaseModel):
+    __name__ = 'VMT'
+    
+    company: str 
+    permit: str = Field(pattern=f'(AVT|AVDT){numeric_re}')
+    vin: str
+    year: int 
+    month: int
+    month_name: str = Field(pattern='[Jj][Aa][Nn][Uu][Aa][Rr][Yy]|[Ff][Ee][Bb][Rr][Uu][Aa][Rr][Yy]|[Mm][Aa][Rr][Cc][Hh]|[Aa][Pp][Rr][Ii][Ll]|[Mm][Aa][Yy]|[Jj][Uu][Nn][Ee]|[Jj][Uu][Ll][Yy]|[Aa][Uu][Gg][Uu][Ss][Tt]|[Ss][Ee][Pp][Tt][Ee][Mm][Bb][Ee][Rr]|[Oo][Cc][Tt][Oo][Bb][Ee][Rr]|[Nn][Oo][Vv][Ee][Mm][Bb][Ee][Rr]|[Dd][Ee][Cc][Ee][Mm][Bb][Ee][Rr]')
+    vmt: float

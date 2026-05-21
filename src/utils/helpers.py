@@ -358,6 +358,43 @@ def read_data_dictionary(path, sheet_names=None):
             if m.groupdict()['type'] == 'Dictionary':
                 dd_out[m.groupdict()['name']] = df
     return dd_out
+
+def get_file_model(ifile, min_header_ratio=0.80, drop_unaliased=True, fuzzy=False, min_fuzzy_ratio=0.50, candidate_models=None, orientation='rows'):
+    '''
+    read in a file header, compare it to each model's aliases, and return the one that matches
+    '''
+    if candidate_models == None:
+        candidate_models = [Trip, Month, TripTract, IncidentTract, Incident, IncidentLegacy, Charger, ChargingSession, Stoppage, StoppageFleet]
+    elif isinstance(candidate_models, BaseModel):
+        candidate_models = [candidate_models]
+
+    if orientation == 'rows':
+        header = get_header(ifile, encoding='cp1252') 
+    elif orientation == 'columns':
+        header = get_header(ifile, encoding='cp1252', orientation=orientation) 
+    else:
+        raise Exception('unknown orientation `{}`, expected `rows` or `columns`')
+        
+
+    best_r = 0
+    best_M = None
+    for M in candidate_models:
+        r = header_model_match_ratio(header, 
+                                     M, 
+                                     drop_unaliased=drop_unaliased,
+                                     min_header_ratio=min_header_ratio,
+                                     fuzzy=fuzzy,
+                                     min_fuzzy_ratio=min_fuzzy_ratio
+                                    )
+        print(M.__name__, r)
+        if r == 1:
+            return M
+
+        elif r > best_r and r > min_header_ratio:
+            best_r = r
+            best_M = M
+
+    return best_M
 '''    
 def get_report_descriptions(path, sheet_names=None):
     # read the first row only to get the report description
