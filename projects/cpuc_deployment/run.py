@@ -1,6 +1,6 @@
 
 import pandas as pd
-import csv, re
+import sys, csv, re, argparse, tomllib
 from shutil import copyfile
 from data_models.cpuc_deployment.reports import (Trip, Month, TripTract, IncidentTract, Incident, IncidentLegacy, 
                                                  Charger, ChargingSession, Stoppage, StoppageFleet)
@@ -122,11 +122,25 @@ def read_and_validate_dir(directory, rglob_pattern, Model, rglob_exclude=None, a
     return (pd.DataFrame(columns=columns, data=data))
 
 if __name__=='__main__':
-    INDIR = 'Q:/Data/Regulatory/AV/CPUC/Quarterly Reports/Deployment'
-    EXTRACTED = Path(INDIR) / 'extracted'
-    INTERIM = Path(INDIR) / 'preprocessed'
-    VALIDATED = Path(INDIR) / 'validated'
-     
+    parser = argparse.ArgumentParser(description="Process TOML configuration file for validation.")
+    parser.add_argument("config_path", type=str, help="Path to the TOML configuration file.")
+    
+    # Check if the script is running in an interactive environment or not
+    if len(sys.argv) > 1:
+        # Running from command line, use the provided argument
+        args = parser.parse_args()
+        
+        # Load the TOML configuration file
+        with open(args.config_path, 'rb') as f:
+            config = tomllib.load(f)['cpuc_deployment']
+    else:
+        print("Please supply a config file.")
+        sys.exit()
+
+    EXTRACTED = Path(config['root']) / config['extracted_subdir']
+    INTERIM = Path(config['root']) / config['preprocessed_subdir']
+    VALIDATED = Path(config['root']) / config['validated_subdir']
+
     preprocess_dir(
         idir=EXTRACTED, 
         odir=INTERIM,

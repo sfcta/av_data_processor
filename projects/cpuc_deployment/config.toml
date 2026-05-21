@@ -1,0 +1,5 @@
+[cpuc_deployment]
+root="Q:/Data/Regulatory/AV/CPUC/Quarterly Reports/Deployment"
+extracted_subdir="extracted"
+preprocessed_subdir="preprocessed"
+validated_subdir="validated"
