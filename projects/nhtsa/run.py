@@ -1,4 +1,4 @@
-import sys, os, argparse, tomllib
+import sys, argparse, tomllib
 import numpy as np
 import pandas as pd
 from pathlib import Path
