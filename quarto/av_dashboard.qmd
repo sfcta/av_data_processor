@@ -176,6 +176,8 @@ crash_sf_comp = pd.read_csv(Path(INDIR) / 'crash_sf_comp.csv')
 crash_ca_comp_sev = pd.read_csv(Path(INDIR) / 'crash_ca_comp_sev.csv')
 crash_geo_sev = pd.read_csv(Path(INDIR) / 'crash_geo_sev.csv')
 crash_geo_comp = pd.read_csv(Path(INDIR) / 'crash_geo_comp.csv')
+crashes_by_month_ca = pd.read_csv(Path(INDIR) / 'crashes_by_month_ca.csv')
+crashes_by_month_sf = pd.read_csv(Path(INDIR) / 'crashes_by_month_sf.csv')
 
 severity_order = ['No Injuries Reported','Minor','Moderate','Serious','Fatality','Unknown']
 
@@ -447,6 +449,17 @@ fig10 = px.scatter_map(
 fig10.show()
 ```
 
+## Row
+```{python}
+#| title: Crashes in California by Company [download](https://hyperlink.com)
+
+
+px.line(
+    crashes_by_month_ca,
+    x='date', y='collisions', color='operating_entity',
+    category_orders={'operating_entity':comp_crashtot_descending}
+)
+```
 
 ## Row
 
