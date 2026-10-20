@@ -1,6 +1,6 @@
 [nhtsa]
 indir = "Q:/Data/Regulatory/AV/NHTSA"
-crash_report_latest = "Q:/Data/Regulatory/AV/NHTSA/Downloads/20260514/SGO-2021-01_Incident_Reports_ADS.csv"
+crash_report_latest = "Q:/Data/Regulatory/AV/NHTSA/Downloads/20260825/SGO-2021-01_Incident_Reports_ADS.csv"
 crash_report_legacy = "Q:/Data/Regulatory/AV/NHTSA/Downloads/20250819/SGO-2021-01_Incident_Reports_ADS - 20210701-20250615.csv"
 outdir = "Q:/Data/Regulatory/AV/NHTSA/processed"
 ads_crash_file = 'nhtsa_ads_crashes.csv'

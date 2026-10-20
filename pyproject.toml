@@ -1,6 +1,6 @@
 
 [project]
-name = "av_dashboard"
+name = "av_data_processor"
 version = "0.1.0"
 description = "Set of tools to process and analyze cpuc av quarterly reports."
 readme = "README.md"
@@ -16,6 +16,7 @@ dependencies = [
     "dash>=4.1.0",
     "plotly>=6.5.2",
     "geocoder>=1.38.1",
+    "dash-ag-grid>=35.2.0",
 ]
 
 [dependency-groups]
