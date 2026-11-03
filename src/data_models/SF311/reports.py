@@ -1,7 +1,7 @@
 from math import nan, isnan
 from typing import Any, Annotated, Optional, TypeVar
 from datetime import datetime
-from data_models.SF311.fields import *
+from data_models.sf311.fields import *
 from pydantic import BaseModel, Field, computed_field
 from pydantic.functional_validators import AfterValidator, BeforeValidator
 from utils.helpers import primary_type_or_na_or_redacted, primary_type_or_redacted, coerce_nan_to_none, compare_if_numeric, coerce_nan_to, coerce_str_to_number, numeric_str_to_float
