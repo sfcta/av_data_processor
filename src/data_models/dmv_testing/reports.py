@@ -3,7 +3,6 @@ from pathlib import Path
 from shutil import copyfile
 from typing import Any, Annotated, Optional, TypeVar, Union, Literal
 from datetime import datetime
-from data_models.nhtsa.fields import *
 from pydantic import BaseModel, Field, computed_field
 from pydantic.functional_validators import AfterValidator, BeforeValidator
 
